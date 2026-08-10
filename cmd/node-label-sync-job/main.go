@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/api/features"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
@@ -125,7 +126,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := controllers.SyncVSphereNodeLabels(ctx, k8sClient, featureGateAccessor); err != nil {
+	currentFeatureGates, err := featureGateAccessor.CurrentFeatureGates()
+	if err != nil {
+		setupLog.Error(err, "failed to get current feature gates")
+		os.Exit(1)
+	}
+	if !currentFeatureGates.Enabled(features.FeatureGateVSphereMixedNodeEnv) {
+		setupLog.Info("VSphereMixedNodeEnv feature gate is disabled, nothing to do")
+		return
+	}
+
+	if err := controllers.SyncVSphereNodeLabels(ctx, k8sClient); err != nil {
 		setupLog.Error(err, "failed to sync vSphere node labels")
 		os.Exit(1)
 	}

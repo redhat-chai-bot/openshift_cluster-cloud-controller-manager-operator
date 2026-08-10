@@ -45,9 +45,6 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
-      - key: node.cloudprovider.kubernetes.io/uninitialized
-        effect: NoSchedule
-        value: "true"
       - key: "node-role.kubernetes.io/master"
         operator: "Exists"
         effect: "NoSchedule"
@@ -62,8 +59,8 @@ spec:
       - key: "node.cloudprovider.kubernetes.io/uninitialized"
         operator: "Exists"
         effect: "NoSchedule"
-        # CNI relies on CCM to fill in IP information on Node objects.
-        # Therefore we must schedule before the CNI can mark the Node as ready.
+      # CNI relies on CCM to fill in IP information on Node objects.
+      # Therefore we must schedule before the CNI can mark the Node as ready.
       - key: "node.kubernetes.io/not-ready"
         operator: "Exists"
         effect: "NoSchedule"

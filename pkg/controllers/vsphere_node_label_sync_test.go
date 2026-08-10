@@ -5,18 +5,21 @@ import (
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/api/features"
-	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/openshift/cluster-cloud-controller-manager-operator/pkg/cloud/vsphere"
 )
+
+func init() {
+	utilruntime.Must(configv1.AddToScheme(scheme.Scheme))
+}
 
 func newTestInfrastructure(platformType configv1.PlatformType) *configv1.Infrastructure {
 	return &configv1.Infrastructure{
@@ -46,34 +49,24 @@ func TestSyncVSphereNodeLabels(t *testing.T) {
 	noProviderIDNode := newTestNode("no-provider-id", "", nil)
 
 	testCases := []struct {
-		name               string
-		platformType       configv1.PlatformType
-		featureGateEnabled bool
-		nodes              []*corev1.Node
-		expectLabeled      []string
-		expectNotLabeled   []string
+		name             string
+		platformType     configv1.PlatformType
+		nodes            []*corev1.Node
+		expectLabeled    []string
+		expectNotLabeled []string
 	}{
 		{
-			name:               "labels vsphere node missing the label when gate enabled on vSphere platform",
-			platformType:       configv1.VSpherePlatformType,
-			featureGateEnabled: true,
-			nodes:              []*corev1.Node{vsphereNodeMissingLabel, vsphereNodeAlreadyLabeled, vsphereNodeWithOtherLabelValue, bareMetalNode, noProviderIDNode},
-			expectLabeled:      []string{"vsphere-missing-label", "vsphere-already-labeled"},
-			expectNotLabeled:   []string{"bare-metal", "no-provider-id", "vsphere-other-label-value"},
+			name:             "labels vsphere node missing the label on vSphere platform",
+			platformType:     configv1.VSpherePlatformType,
+			nodes:            []*corev1.Node{vsphereNodeMissingLabel, vsphereNodeAlreadyLabeled, vsphereNodeWithOtherLabelValue, bareMetalNode, noProviderIDNode},
+			expectLabeled:    []string{"vsphere-missing-label", "vsphere-already-labeled"},
+			expectNotLabeled: []string{"bare-metal", "no-provider-id", "vsphere-other-label-value"},
 		},
 		{
-			name:               "does nothing when feature gate is disabled",
-			platformType:       configv1.VSpherePlatformType,
-			featureGateEnabled: false,
-			nodes:              []*corev1.Node{vsphereNodeMissingLabel},
-			expectNotLabeled:   []string{"vsphere-missing-label"},
-		},
-		{
-			name:               "does nothing on non-vSphere platforms",
-			platformType:       configv1.AWSPlatformType,
-			featureGateEnabled: true,
-			nodes:              []*corev1.Node{vsphereNodeMissingLabel},
-			expectNotLabeled:   []string{"vsphere-missing-label"},
+			name:             "does nothing on non-vSphere platforms",
+			platformType:     configv1.AWSPlatformType,
+			nodes:            []*corev1.Node{vsphereNodeMissingLabel},
+			expectNotLabeled: []string{"vsphere-missing-label"},
 		},
 	}
 
@@ -86,16 +79,7 @@ func TestSyncVSphereNodeLabels(t *testing.T) {
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(objs...).Build()
 
-			var featureGateAccess featuregates.FeatureGateAccess
-			if tc.featureGateEnabled {
-				featureGateAccess = featuregates.NewHardcodedFeatureGateAccess(
-					[]configv1.FeatureGateName{features.FeatureGateVSphereMixedNodeEnv}, nil)
-			} else {
-				featureGateAccess = featuregates.NewHardcodedFeatureGateAccess(nil,
-					[]configv1.FeatureGateName{features.FeatureGateVSphereMixedNodeEnv})
-			}
-
-			require.NoError(t, SyncVSphereNodeLabels(context.Background(), fakeClient, featureGateAccess))
+			require.NoError(t, SyncVSphereNodeLabels(context.Background(), fakeClient))
 
 			for _, name := range tc.expectLabeled {
 				node := &corev1.Node{}

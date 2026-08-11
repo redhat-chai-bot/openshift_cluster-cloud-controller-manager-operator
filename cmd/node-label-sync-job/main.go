@@ -62,7 +62,7 @@ const (
 	managedNamespace       = controllers.DefaultManagedNamespace
 	featureGateWaitTimeout = 1 * time.Minute
 	// jobTimeout bounds the process's overall runtime safely below the Job manifest's
-	// activeDeadlineSeconds (300s), so it can log a clear error and exit cleanly instead of
+	// activeDeadlineSeconds (5m), so it can log a clear error and exit cleanly instead of
 	// being killed by the kubelet once the deadline is hit.
 	jobTimeout = 4 * time.Minute
 )

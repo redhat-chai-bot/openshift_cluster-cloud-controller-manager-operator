@@ -117,6 +117,9 @@ spec:
             - name: trusted-ca
               mountPath: /etc/pki/ca-trust/extracted/pem
               readOnly: true
+            - name: bound-sa-token
+              mountPath: /var/run/secrets/openshift/serviceaccount
+              readOnly: true
       volumes:
         - name: config-gccm
           configMap:
@@ -137,3 +140,9 @@ spec:
             items:
               - key: ca-bundle.crt
                 path: tls-ca-bundle.pem
+        - name: bound-sa-token
+          projected:
+            sources:
+            - serviceAccountToken:
+                path: token
+                audience: openshift
